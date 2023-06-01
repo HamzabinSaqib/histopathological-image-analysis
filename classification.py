@@ -49,15 +49,18 @@ class collection:
                     # Append the image to the array
                     self.image_array.append(image)
 
-        print(f"\nTotal Images: {len(self.image_array)}\n")
+        print(f"\nTotal Images: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}\n")
+        np.save("Training_Data", self.image_array)
+        print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
-    def display(self, quantity: int, shift: int):
+    def display(self, quantity: int = 20, shift: int = 0):
         """Displaying the Extracted Images"""
         if self.image_array == []:
-            msg = '\nNo Images Found!\n'
-            print(f"{Fore.LIGHTRED_EX}{Style.BRIGHT}{msg}{Style.RESET_ALL}")
+            print(f"\n{Fore.LIGHTRED_EX}{Style.BRIGHT}{'No Images Found!'}{Style.RESET_ALL}\n")
             return
         # Else
+        print(f"Displaying {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{quantity}{Style.RESET_ALL}", end=' ')
+        print(f"Images from Index : {Fore.LIGHTGREEN_EX}{Style.BRIGHT}{shift}{Style.RESET_ALL}\n")
         num_rows = (quantity + 6) // 7
         num_cols = min(quantity, 7)
         fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 2, num_rows * 2))
@@ -65,7 +68,7 @@ class collection:
         for i, ax in enumerate(axes.flat):
             if i < quantity:
                 ax.imshow(self.image_array[abs(shift) + i])
-                ax.set_title(self.label_array[abs(shift) + i])
+                ax.set_title(self.label_array[abs(shift) + i], fontsize=9)
             ax.axis('off')
 
         plt.tight_layout()
@@ -89,7 +92,8 @@ class collection:
 
 zip_path = "Queensland Dataset CE42.zip"
 file_format = '.png'
+
 dataset = collection(zip_path, file_format)
 
 dataset.extract()
-dataset.display(25, 400)
+dataset.display(21, 600)
