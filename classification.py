@@ -9,6 +9,7 @@ from tensorflow import keras
 import matplotlib.pyplot as plt
 from colorama import Fore, Style
 from matplotlib.figure import Figure
+from timeit import default_timer as timer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import QApplication, QMainWindow, QScrollArea, QWidget, QHBoxLayout
 
@@ -28,6 +29,7 @@ class collection:
         self.file_path = path
         self.file_format = format
         self.image_array = []
+        self.mask_array = []
         self.label_array = []
         
     def extract(self):
@@ -35,8 +37,8 @@ class collection:
         with zipfile.ZipFile(self.file_path, 'r') as zf:
             # Iterate over the files in the zip file
             for file_name in zf.namelist():
-                # Check only the 'Images' folder for .png files
-                if 'Images' in file_name and file_name.lower().endswith(self.file_format):
+                # Check folder for .png files
+                if file_name.lower().endswith(self.file_format):
                     print(file_name)
                     # Append the image name to the label array
                     self.label_array.append(self.__onlyName(file_name))
@@ -46,28 +48,35 @@ class collection:
                     np_arr = np.frombuffer(file_content, np.uint8)
                     # Decode the image array using OpenCV
                     image = cv.imdecode(np_arr, cv.IMREAD_UNCHANGED)
-                    # Append the image to the array
-                    self.image_array.append(image)
+                    if 'Images' in file_name:
+                        # Append the image to the array
+                        self.image_array.append(image)
+                    elif 'Masks' in file_name:
+                        # Append the mask to the array
+                        self.mask_array.append(image)
 
-        print(f"\nTotal Images: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}\n")
-        np.save("Training_Data", self.image_array)
+        print(f"\nTotal Images: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}", end=', ')
+        print(f"Total Masks: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.mask_array)}{Style.RESET_ALL}\n")
+        np.save("Training_Images", self.image_array)
+        np.save("Training_Masks", self.mask_array)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
-    def display(self, quantity: int = 20, shift: int = 0):
+    def display(self, choice: bool = 1, quantity: int = 20, shift: int = 0):
         """Displaying the Extracted Images"""
-        if self.image_array == []:
-            print(f"\n{Fore.LIGHTRED_EX}{Style.BRIGHT}{'No Images Found!'}{Style.RESET_ALL}\n")
+        array = self.image_array if choice else self.mask_array
+        if array == []:
+            print(f"\n{Fore.LIGHTRED_EX}{Style.BRIGHT}No {'Images' if choice else 'Masks'} Found!{Style.RESET_ALL}\n")
             return
         # Else
         print(f"Displaying {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{quantity}{Style.RESET_ALL}", end=' ')
-        print(f"Images from Index : {Fore.LIGHTGREEN_EX}{Style.BRIGHT}{shift}{Style.RESET_ALL}\n")
+        print(f"{'Images' if choice else 'Masks'} from Index : {Fore.LIGHTGREEN_EX}{Style.BRIGHT}{shift}{Style.RESET_ALL}\n")
         num_rows = (quantity + 6) // 7
         num_cols = min(quantity, 7)
         fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 2, num_rows * 2))
         
         for i, ax in enumerate(axes.flat):
             if i < quantity:
-                ax.imshow(self.image_array[abs(shift) + i])
+                ax.imshow(array[abs(shift) + i])
                 ax.set_title(self.label_array[abs(shift) + i], fontsize=9)
             ax.axis('off')
 
@@ -93,7 +102,19 @@ class collection:
 zip_path = "Queensland Dataset CE42.zip"
 file_format = '.png'
 
+start = timer() # Start Timer
+
 dataset = collection(zip_path, file_format)
 
 dataset.extract()
-dataset.display(21, 600)
+dataset.display(0, 21, 600)
+
+
+
+
+
+
+
+#! Program Run Time
+# endTime = f"{(timer()-start):.2f}s"
+# print(f'RunTime: {Fore.RED}{Style.NORMAL}{endTime}{Style.RESET_ALL}\n')
