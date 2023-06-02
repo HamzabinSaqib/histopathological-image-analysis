@@ -1,7 +1,8 @@
 import os
 import sys
-import cv2 as cv
+import random
 import zipfile
+import cv2 as cv
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -32,6 +33,13 @@ class collection:
         self.mask_array = []
         self.label_array = []
         
+        self.train_images = []
+        self.train_masks = []
+        self.test_images = []
+        self.test_masks = []
+        self.val_images = []
+        self.val_masks = []
+        
     def extract(self):
         """Extracting Training Data from Dataset"""
         with zipfile.ZipFile(self.file_path, 'r') as zf:
@@ -55,16 +63,64 @@ class collection:
                         # Append the mask to the array
                         self.mask_array.append(image)
 
+        self.image_array = np.array(self.image_array)
+        self.mask_array = np.array(self.mask_array)
         print(f"\nTotal Images: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}", end=', ')
         print(f"Total Masks: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.mask_array)}{Style.RESET_ALL}\n")
         np.save("Training_Images", self.image_array)
         np.save("Training_Masks", self.mask_array)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
+    def split(self):
+        """Split Data into Training, Validation & Testing Sets"""
+        # Training Data Ratio 70%
+        train_ratio = 0.7
+        # Validation & Test Data Ratio 15% each
+        val_ratio = 0.15
+        
+        num_images = len(self.image_array)
+        # Create a shuffled index array
+        indices = np.arange(num_images)
+        np.random.shuffle(indices)
+        # Calculate Split Points based on Ratios
+        train_split = int(num_images * train_ratio)
+        val_split = int(num_images * (train_ratio + val_ratio))
+        # Splitting
+        train_indices = indices[:train_split]
+        val_indices = indices[train_split:val_split]
+        test_indices = indices[val_split:]
+        # Storing Split Data into Arrays
+        self.train_images = self.image_array[train_indices]
+        self.train_masks = self.mask_array[train_indices]
+
+        self.val_images = self.image_array[val_indices]
+        self.val_masks = self.mask_array[val_indices]
+
+        self.test_images = self.image_array[test_indices]
+        self.test_masks = self.mask_array[test_indices]
+        # Save if desired
+        opt = input('Save Split Data? (Y/N): ')
+        self.__saveSplitData() if opt == 'y' or opt == 'Y' else None
+        
+    def __saveSplitData(self):
+        """Save the Training, Validation & Testing Sets as .npy files"""
+        dir = ["Split_Data/Images/", "Split_Data/Masks/"]
+        mat = [[self.train_images, self.val_images, self.test_images],
+                [self.train_masks, self.val_masks, self.test_masks]]
+        for i in range(2):
+            # Create the Data Directory if it doesn't exist
+            os.makedirs(dir[i], exist_ok=True)
+            np.save(os.path.join(dir[i], "Training.npy"), mat[i][0])
+            np.save(os.path.join(dir[i], "Validation.npy"), mat[i][1])
+            np.save(os.path.join(dir[i], "Testing.npy"), mat[i][2])
+        
+        print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Split Data Saved!'}{Style.RESET_ALL}\n")
+        
+        
     def display(self, choice: bool = 1, quantity: int = 20, shift: int = 0):
         """Displaying the Extracted Images"""
-        array = self.image_array if choice else self.mask_array
-        if array == []:
+        this_array = self.image_array if choice else self.mask_array
+        if np.size(this_array) == 0:
             print(f"\n{Fore.LIGHTRED_EX}{Style.BRIGHT}No {'Images' if choice else 'Masks'} Found!{Style.RESET_ALL}\n")
             return
         # Else
@@ -76,7 +132,7 @@ class collection:
         
         for i, ax in enumerate(axes.flat):
             if i < quantity:
-                ax.imshow(array[abs(shift) + i])
+                ax.imshow(this_array[abs(shift) + i])
                 ax.set_title(self.label_array[abs(shift) + i], fontsize=9)
             ax.axis('off')
 
@@ -108,7 +164,7 @@ dataset = collection(zip_path, file_format)
 
 dataset.extract()
 dataset.display(0, 21, 600)
-
+dataset.split()
 
 
 
