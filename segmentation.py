@@ -30,6 +30,7 @@ class collection:
         self.file_format = format
         self.image_array = []
         self.mask_array = []
+        self.oneHot_mask_array = []
         self.image_label_array = []
         self.mask_label_array = []
         
@@ -44,11 +45,13 @@ class collection:
         self.classes_dict = {}
         self.classNum = 0
     
+    
     def __setList(self):
         return [(108, 0, 115), (145, 1, 122), (0, 0, 0), 
                 (254, 246, 242), (73, 0, 106), (236, 85, 157),
                 (181, 9, 130), (248, 123, 168), (216, 47, 148),
                 (127, 255, 255), (127, 255, 142), (255, 127, 127)]
+    
     
     def extract(self):
         """Extracting Training Data from Dataset"""
@@ -79,17 +82,24 @@ class collection:
                         image = self.__cleanUp(image)
                         # Convert to Single Channel
                         image = self.__toGrayscale(image)
-                        print(image.shape)
                         # Append the mask to the array
                         self.mask_array.append(image)
-
+                        # Applying One-Hot Encoding to Mask
+                        image = self.__oneHotEncode(image)
+                        # Append the OneHot Masks to the array
+                        self.oneHot_mask_array.append(image)
+        
         self.image_array = np.array(self.image_array)
         self.mask_array = np.array(self.mask_array)
+        self.oneHot_mask_array = np.array(self.oneHot_mask_array)
+        print(self.oneHot_mask_array.shape)
+        # Printing Details
         print(f"\nImages: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}", end=', ')
         print(f"Masks: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.mask_array)}{Style.RESET_ALL}", end=', ')
         print(f"Classes: {Fore.LIGHTYELLOW_EX}{Style.BRIGHT}{len(self.classes_dict)}{Style.RESET_ALL}\n")
         np.save("Training_Images", self.image_array)
         np.save("Training_Masks", self.mask_array)
+        np.save("OneHot_Masks", self.oneHot_mask_array)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
         
@@ -165,9 +175,9 @@ class collection:
         plt.show()
         
     
-    def oneHotEncode(self):
-        """Convert Grayscale to One-Hot Encoded"""
-        pass
+    def __oneHotEncode(self, img):
+        """Convert Grayscale to One-Hot Encoded Representation"""
+        return np.eye(12)[img].astype(np.uint8)
         
         
     def __toGrayscale(self, img):
