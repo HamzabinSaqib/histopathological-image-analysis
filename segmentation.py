@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import random
 import zipfile
 import cv2 as cv
@@ -9,8 +10,6 @@ import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 from colorama import Fore, Style
-import matplotlib.colors as mcolors
-from matplotlib.figure import Figure
 from timeit import default_timer as timer
 
 from keras.models import *
@@ -97,8 +96,8 @@ class collection:
         print(f"\nImages: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}", end=', ')
         print(f"Masks: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.mask_array)}{Style.RESET_ALL}", end=', ')
         print(f"Classes: {Fore.LIGHTYELLOW_EX}{Style.BRIGHT}{len(self.classes_dict)}{Style.RESET_ALL}\n")
-        np.save("Training_Images", self.image_array)
-        np.save("Training_Masks", self.mask_array)
+        np.save("Dataset_Images", self.image_array)
+        np.save("Dataset_Masks", self.mask_array)
         np.save("OneHot_Masks", self.oneHot_mask_array)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
@@ -108,7 +107,7 @@ class collection:
         # Training Data Ratio 70%
         train_ratio = 0.7
         # Validation Data Ratio 20%
-        val_ratio = 0.20
+        val_ratio = 0.2
         
         num_images = len(self.image_array)
         # Create a shuffled index array
@@ -123,13 +122,13 @@ class collection:
         test_indices = indices[val_split:]
         # Storing Split Data into Arrays
         self.train_images = self.image_array[train_indices]
-        self.train_masks = self.mask_array[train_indices]
+        self.train_masks = self.oneHot_mask_array[train_indices]
 
         self.val_images = self.image_array[val_indices]
-        self.val_masks = self.mask_array[val_indices]
+        self.val_masks = self.oneHot_mask_array[val_indices]
 
         self.test_images = self.image_array[test_indices]
-        self.test_masks = self.mask_array[test_indices]
+        self.test_masks = self.oneHot_mask_array[test_indices]
         # Save if desired
         opt = input('Save Split Data? (Y/N): ')
         self.__saveSplitData() if opt == 'y' or opt == 'Y' else None
@@ -146,7 +145,8 @@ class collection:
             np.save(os.path.join(dir[i], "Training.npy"), mat[i][0])
             np.save(os.path.join(dir[i], "Validation.npy"), mat[i][1])
             np.save(os.path.join(dir[i], "Testing.npy"), mat[i][2])
-        
+        # Save Training-Ready Dataset
+        shutil.make_archive('Ready Dataset', 'zip', 'Split_Data')
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Split Data Saved!'}{Style.RESET_ALL}\n")
         
         
