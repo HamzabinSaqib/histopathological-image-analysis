@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 from colorama import Fore, Style
+import matplotlib.colors as mcolors
 from matplotlib.figure import Figure
 from timeit import default_timer as timer
 
@@ -29,7 +30,8 @@ class collection:
         self.file_format = format
         self.image_array = []
         self.mask_array = []
-        self.label_array = []
+        self.image_label_array = []
+        self.mask_label_array = []
         
         self.train_images = []
         self.train_masks = []
@@ -38,16 +40,15 @@ class collection:
         self.val_images = []
         self.val_masks = []
         
-        self.classes = self.__setMap()
+        self.classes_list = self.__setList()
+        self.classes_dict = {}
         self.classNum = 0
     
-    
-    def __setMap(self):
-        return {(108, 0, 115): 20, (145, 1, 122): 10, (0, 0, 0): 0, 
-                (254, 246, 242): 30, (73, 0, 106): 40, (236, 85, 157): 50,
-                (181, 9, 130): 60, (248, 123, 168): 70, (216, 47, 148): 80,
-                (127, 255, 255): 90, (127, 255, 142): 100, (255, 127, 127): 110}
-    
+    def __setList(self):
+        return [(108, 0, 115), (145, 1, 122), (0, 0, 0), 
+                (254, 246, 242), (73, 0, 106), (236, 85, 157),
+                (181, 9, 130), (248, 123, 168), (216, 47, 148),
+                (127, 255, 255), (127, 255, 142), (255, 127, 127)]
     
     def extract(self):
         """Extracting Training Data from Dataset"""
@@ -57,8 +58,6 @@ class collection:
                 # Check folder for .png files
                 if file_name.lower().endswith(self.file_format):
                     print(file_name)
-                    # Append the image name to the label array
-                    self.label_array.append(self.__onlyName(file_name))
                     # Read image as Bytes
                     file_content = zf.read(file_name)
                     # Convert the file content to a numpy array
@@ -66,19 +65,29 @@ class collection:
                     # Decode the image array using OpenCV
                     image = cv.imdecode(np_arr, cv.IMREAD_UNCHANGED)
                     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+                    # Normalization 0-255
+                    image = np.clip(image, 0, 255).astype(np.uint8)
                     if 'Images' in file_name:
+                        # Append the image name to the label array
+                        self.image_label_array.append(self.__onlyName(file_name))
                         # Append the image to the array
                         self.image_array.append(image)
                     elif 'Masks' in file_name:
+                        # Append the image name to the label array
+                        self.mask_label_array.append(self.__onlyName(file_name))
+                        # Remove Pixel Values outside given Classes
                         image = self.__cleanUp(image)
-                        # image = self.__toGrayscale(image)
+                        # Convert to Single Channel
+                        image = self.__toGrayscale(image)
+                        print(image.shape)
                         # Append the mask to the array
                         self.mask_array.append(image)
 
         self.image_array = np.array(self.image_array)
         self.mask_array = np.array(self.mask_array)
-        print(f"\nTotal Images: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}", end=', ')
-        print(f"Total Masks: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.mask_array)}{Style.RESET_ALL}\n")
+        print(f"\nImages: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.image_array)}{Style.RESET_ALL}", end=', ')
+        print(f"Masks: {Fore.LIGHTCYAN_EX}{Style.BRIGHT}{len(self.mask_array)}{Style.RESET_ALL}", end=', ')
+        print(f"Classes: {Fore.LIGHTYELLOW_EX}{Style.BRIGHT}{len(self.classes_dict)}{Style.RESET_ALL}\n")
         np.save("Training_Images", self.image_array)
         np.save("Training_Masks", self.mask_array)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
@@ -134,6 +143,8 @@ class collection:
     def display(self, choice: bool = 1, quantity: int = 20, shift: int = 0):
         """Displaying the Extracted Images"""
         this_array = self.image_array if choice else self.mask_array
+        this_label_array = self.image_label_array if choice else self.mask_label_array
+        this_color = None if choice else 'gray'
         if np.size(this_array) == 0:
             print(f"\n{Fore.LIGHTRED_EX}{Style.BRIGHT}No {'Images' if choice else 'Masks'} Found!{Style.RESET_ALL}\n")
             return
@@ -146,8 +157,8 @@ class collection:
         
         for i, ax in enumerate(axes.flat):
             if i < quantity:
-                ax.imshow(this_array[abs(shift) + i])
-                ax.set_title(self.label_array[abs(shift) + i], fontsize=9)
+                ax.imshow(this_array[abs(shift) + i], cmap=this_color)
+                ax.set_title(this_label_array[abs(shift) + i], fontsize=9)
             ax.axis('off')
 
         plt.tight_layout()
@@ -164,23 +175,45 @@ class collection:
         rows, cols, _ = img.shape
         for i in range(rows):
             for j in range(cols):
-                img[i, j] = self.classes[tuple(img[i, j])]
-                
-        return np.mean(img, axis=2, keepdims=True)
+                curr = tuple(img[i, j])
+                # If Current Pixel Value is Not Mapped
+                if curr not in self.classes_dict:
+                    self.classes_dict[curr] = self.classNum
+                    self.classNum += 1
+                # Set the Pixel to Corresponding INT Value
+                img[i, j] = self.classes_dict[curr]
+        # Return Single Channel Image        
+        return img[:, :, 0]
         
         
     def __cleanUp(self, img):
         """Clean Up Outlier RGB Values"""
         rows, cols, _ = img.shape
-        for i in range(rows):
-            for j in range(cols):
-                pixel = img[i, j]
-                # Check if the pixel value is in the set of distinct pixels
-                if tuple(pixel) not in self.classes:
-                    # Find the closest pixel value from the set (Euclidean Distance)
-                    closest_pixel = min(self.classes, key=lambda x: np.linalg.norm(pixel - x))
-                    # Assign the closest pixel value to the current pixel
-                    img[i, j] = closest_pixel
+        # Create a lookup table to map pixel values to their closest class values
+        lookup_table = {}
+        for pixel in self.classes_list:
+            lookup_table[pixel] = pixel
+        # Convert the image to a 1D array of shape (rows*cols, 3)
+        flat_img = img.reshape(-1, 3)
+        # Find the indices of pixels that are not in the lookup table
+        outlier_indices = np.ones(flat_img.shape[0], dtype=bool)
+        for pixel in self.classes_list:
+            outlier_indices &= np.any(flat_img != pixel, axis=1)
+        # Get the pixel values of outliers
+        outliers = flat_img[outlier_indices]
+        # Check if there are any outliers
+        if len(outliers) > 0:
+            # Find the closest class values for the outliers using Euclidean distance
+            closest_classes = []
+            for outlier in outliers:
+                closest_pixel = min(self.classes_list, key=lambda x: np.linalg.norm(outlier - x))
+                closest_classes.append(closest_pixel)
+            # Assign the closest class values to the outlier pixels
+            flat_img[outlier_indices] = closest_classes
+        # Reshape the cleaned image back to its original shape
+        cleaned_img = flat_img.reshape(rows, cols, 3)
+        # Update the original image
+        img[:] = cleaned_img
                 
         return img
     
