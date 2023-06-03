@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 from colorama import Fore, Style
 from matplotlib.figure import Figure
 from timeit import default_timer as timer
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from PyQt5.QtWidgets import QApplication, QMainWindow, QScrollArea, QWidget, QHBoxLayout
 
 from keras.models import *
 from keras.layers import *
@@ -40,6 +38,17 @@ class collection:
         self.val_images = []
         self.val_masks = []
         
+        self.classes = self.__setMap()
+        self.classNum = 0
+    
+    
+    def __setMap(self):
+        return {(108, 0, 115): 20, (145, 1, 122): 10, (0, 0, 0): 0, 
+                (254, 246, 242): 30, (73, 0, 106): 40, (236, 85, 157): 50,
+                (181, 9, 130): 60, (248, 123, 168): 70, (216, 47, 148): 80,
+                (127, 255, 255): 90, (127, 255, 142): 100, (255, 127, 127): 110}
+    
+    
     def extract(self):
         """Extracting Training Data from Dataset"""
         with zipfile.ZipFile(self.file_path, 'r') as zf:
@@ -56,10 +65,13 @@ class collection:
                     np_arr = np.frombuffer(file_content, np.uint8)
                     # Decode the image array using OpenCV
                     image = cv.imdecode(np_arr, cv.IMREAD_UNCHANGED)
+                    image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
                     if 'Images' in file_name:
                         # Append the image to the array
                         self.image_array.append(image)
                     elif 'Masks' in file_name:
+                        image = self.__cleanUp(image)
+                        # image = self.__toGrayscale(image)
                         # Append the mask to the array
                         self.mask_array.append(image)
 
@@ -71,12 +83,13 @@ class collection:
         np.save("Training_Masks", self.mask_array)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
+        
     def split(self):
         """Split Data into Training, Validation & Testing Sets"""
         # Training Data Ratio 70%
         train_ratio = 0.7
-        # Validation & Test Data Ratio 15% each
-        val_ratio = 0.15
+        # Validation Data Ratio 20%
+        val_ratio = 0.20
         
         num_images = len(self.image_array)
         # Create a shuffled index array
@@ -101,6 +114,7 @@ class collection:
         # Save if desired
         opt = input('Save Split Data? (Y/N): ')
         self.__saveSplitData() if opt == 'y' or opt == 'Y' else None
+        
         
     def __saveSplitData(self):
         """Save the Training, Validation & Testing Sets as .npy files"""
@@ -138,6 +152,38 @@ class collection:
 
         plt.tight_layout()
         plt.show()
+        
+    
+    def oneHotEncode(self):
+        """Convert Grayscale to One-Hot Encoded"""
+        pass
+        
+        
+    def __toGrayscale(self, img):
+        """Converting from 3 to 1 channel"""
+        rows, cols, _ = img.shape
+        for i in range(rows):
+            for j in range(cols):
+                img[i, j] = self.classes[tuple(img[i, j])]
+                
+        return np.mean(img, axis=2, keepdims=True)
+        
+        
+    def __cleanUp(self, img):
+        """Clean Up Outlier RGB Values"""
+        rows, cols, _ = img.shape
+        for i in range(rows):
+            for j in range(cols):
+                pixel = img[i, j]
+                # Check if the pixel value is in the set of distinct pixels
+                if tuple(pixel) not in self.classes:
+                    # Find the closest pixel value from the set (Euclidean Distance)
+                    closest_pixel = min(self.classes, key=lambda x: np.linalg.norm(pixel - x))
+                    # Assign the closest pixel value to the current pixel
+                    img[i, j] = closest_pixel
+                
+        return img
+    
         
     def __onlyName(self, path: str):
         """Extract only file name from complete path"""
