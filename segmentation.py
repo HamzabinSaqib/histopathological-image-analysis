@@ -130,7 +130,11 @@ class collection:
         self.test_images = self.image_array[test_indices]
         self.test_masks = self.oneHot_mask_array[test_indices]
         # Save if desired
-        opt = input('Save Split Data? (Y/N): ')
+        prompt = 'Save Split Data? ('
+        prompt += f"{Fore.LIGHTGREEN_EX}{Style.NORMAL}{'Y'}{Style.RESET_ALL}/"
+        prompt += f"{Fore.LIGHTRED_EX}{Style.NORMAL}{'N'}{Style.RESET_ALL}): "
+        opt = input(prompt)
+        
         self.__saveSplitData() if opt == 'y' or opt == 'Y' else None
         
         
@@ -255,11 +259,10 @@ dataset.extract()
 dataset.display(0, 21, 600)
 dataset.split()
 
-
-
-
-
-
 #! Program Run Time
-# endTime = f"{(timer()-start):.2f}s"
-# print(f'RunTime: {Fore.RED}{Style.NORMAL}{endTime}{Style.RESET_ALL}\n')
+# Calculate the elapsed time
+elapsed_time = timer() - start
+minutes = int(elapsed_time // 60)
+seconds = int(elapsed_time % 60)
+
+print(f'RunTime: {Fore.RED}{Style.NORMAL}{minutes}m {seconds}s{Style.RESET_ALL}\n')
