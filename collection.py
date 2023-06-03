@@ -118,8 +118,8 @@ class collection:
         val_split = int(num_images * (train_ratio + val_ratio))
         # Splitting
         train_indices = indices[:train_split]
-        val_indices = indices[train_split:val_split]
-        test_indices = indices[val_split:]
+        val_indices = indices[train_split:val_split + 1]
+        test_indices = indices[val_split + 1:]
         # Storing Split Data into Arrays
         self.train_images = self.image_array[train_indices]
         self.train_masks = self.oneHot_mask_array[train_indices]
