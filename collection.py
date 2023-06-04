@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import shutil
 import random
 import zipfile
@@ -99,6 +100,10 @@ class collection:
         np.save("Dataset_Images", self.image_array)
         np.save("Dataset_Masks", self.mask_array)
         np.save("OneHot_Masks", self.oneHot_mask_array)
+        # Convert Tuple Keys to Strings for Storage
+        converted_dict = {str(key): value for key, value in self.classes_dict.items()}
+        with open('classes_dict.json', 'w') as f:
+            json.dump(converted_dict, f)
         print(f"{Fore.MAGENTA}{Style.BRIGHT}{'Data Saved Successfully!'}{Style.RESET_ALL}\n")
         
         

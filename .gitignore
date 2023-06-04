@@ -171,6 +171,9 @@ cython_debug/
 # Numpy Arrays
 *.npy
 
+# JSON File
+*.json
+
 # Model Files
 /trained_Model
 /compiled_Model
