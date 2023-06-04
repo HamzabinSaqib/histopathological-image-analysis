@@ -104,13 +104,35 @@ class training:
         conv5 = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(conv5)
         pool5 = MaxPooling2D((2, 2))(conv5)
         pool5 = Dropout(0.5)(pool5)
+        
+        conv6 = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(pool5)
+        conv6 = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(conv6)
+        pool6 = MaxPooling2D((2, 2))(conv6)
+        pool6 = Dropout(0.5)(pool6)
+        
+        conv7 = Conv2D(start_neurons * 64, (3, 3), activation="relu", padding="same")(pool6)
+        conv7 = Conv2D(start_neurons * 64, (3, 3), activation="relu", padding="same")(conv7)
+        pool7 = MaxPooling2D((2, 2))(conv7)
+        pool7 = Dropout(0.5)(pool7)
 
         # Middle
-        convm = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(pool5)
-        convm = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(convm)
+        convm = Conv2D(start_neurons * 128, (3, 3), activation="relu", padding="same")(pool7)
+        convm = Conv2D(start_neurons * 128, (3, 3), activation="relu", padding="same")(convm)
         
         # Decoders
-        deconv5 = Conv2DTranspose(start_neurons * 16, (3, 3), strides=(2, 2), padding="same")(convm)
+        deconv7 = Conv2DTranspose(start_neurons * 64, (3, 3), strides=(2, 2), padding="same")(convm)
+        uconv7 = concatenate([deconv7, conv7])
+        uconv7 = Dropout(0.5)(uconv7)
+        uconv7 = Conv2D(start_neurons * 64, (3, 3), activation="relu", padding="same")(uconv7)
+        uconv7 = Conv2D(start_neurons * 64, (3, 3), activation="relu", padding="same")(uconv7)
+        
+        deconv6 = Conv2DTranspose(start_neurons * 32, (3, 3), strides=(2, 2), padding="same")(uconv7)
+        uconv6 = concatenate([deconv6, conv6])
+        uconv6 = Dropout(0.5)(uconv6)
+        uconv6 = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(uconv6)
+        uconv6 = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(uconv6)
+        
+        deconv5 = Conv2DTranspose(start_neurons * 16, (3, 3), strides=(2, 2), padding="same")(uconv6)
         uconv5 = concatenate([deconv5, conv5])
         uconv5 = Dropout(0.5)(uconv5)
         uconv5 = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(uconv5)
@@ -156,7 +178,8 @@ class training:
     def trainModel(self):
         """Training the Model"""
         batch_size = 10
-        epochs = 20
+        epochs = 30
+        self.model = load_model('compiled_Model')
         self.model.fit(self.x_train, self.y_train, batch_size=batch_size, epochs=epochs, validation_data=(self.x_val, self.y_val))
         self.model.save('trained_Model')
         
@@ -178,9 +201,9 @@ start = timer() # Start Timer
 dataset = training(zip_path, file_format)
 
 dataset.importData()
-# dataset.createModel()
-# dataset.compileModel()
-# dataset.trainModel()
+dataset.createModel()
+dataset.compileModel()
+dataset.trainModel()
 dataset.testModel()
 
 #! Program Run Time
