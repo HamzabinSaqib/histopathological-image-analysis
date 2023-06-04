@@ -155,7 +155,7 @@ class training:
     
     def trainModel(self):
         """Training the Model"""
-        batch_size = 16
+        batch_size = 10
         epochs = 20
         self.model.fit(self.x_train, self.y_train, batch_size=batch_size, epochs=epochs, validation_data=(self.x_val, self.y_val))
         self.model.save('trained_Model')
@@ -163,7 +163,11 @@ class training:
         
     def testModel(self):
         """Testing the Trained Model"""
-        pass
+        self.model = load_model('trained_Model')
+        test_loss, test_accuracy = self.model.evaluate(self.x_test, self.y_test)
+        print('Test Loss:', test_loss)
+        print('Test Accuracy:', test_accuracy)
+        
         
 
 zip_path = "Ready Dataset.zip"
@@ -174,10 +178,10 @@ start = timer() # Start Timer
 dataset = training(zip_path, file_format)
 
 dataset.importData()
-dataset.createModel()
-dataset.compileModel()
-dataset.trainModel()
-
+# dataset.createModel()
+# dataset.compileModel()
+# dataset.trainModel()
+dataset.testModel()
 
 #! Program Run Time
 # Calculate the elapsed time
