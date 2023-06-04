@@ -76,6 +76,8 @@ class training:
     def createModel(self):
         """Defining Model Architecture"""
         inputs = Input(shape=self.__checkShape())
+        print(f"Shape: {Fore.LIGHTGREEN_EX}{Style.BRIGHT}{self.__checkShape()}{Style.RESET_ALL}", end=', ')
+        print(f"Classes: {Fore.LIGHTYELLOW_EX}{Style.BRIGHT}{self.__checkClasses()}{Style.RESET_ALL}\n")
         start_neurons = self.__checkClasses()
         # Encoders
         conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(inputs)
@@ -97,13 +99,24 @@ class training:
         conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
         pool4 = MaxPooling2D((2, 2))(conv4)
         pool4 = Dropout(0.5)(pool4)
+        
+        conv5 = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
+        conv5 = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(conv5)
+        pool5 = MaxPooling2D((2, 2))(conv5)
+        pool5 = Dropout(0.5)(pool5)
 
         # Middle
-        convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
-        convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
+        convm = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(pool5)
+        convm = Conv2D(start_neurons * 32, (3, 3), activation="relu", padding="same")(convm)
         
         # Decoders
-        deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
+        deconv5 = Conv2DTranspose(start_neurons * 16, (3, 3), strides=(2, 2), padding="same")(convm)
+        uconv5 = concatenate([deconv5, conv5])
+        uconv5 = Dropout(0.5)(uconv5)
+        uconv5 = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(uconv5)
+        uconv5 = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(uconv5)
+        
+        deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(uconv5)
         uconv4 = concatenate([deconv4, conv4])
         uconv4 = Dropout(0.5)(uconv4)
         uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
@@ -127,7 +140,7 @@ class training:
         uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
         uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
         
-        output_layer = Conv2D(1, (1,1), padding="same", activation="softmax")(uconv1)
+        output_layer = Conv2D(start_neurons * 1, (1,1), padding="same", activation="softmax")(uconv1)
         
         self.model = Model(inputs=inputs, outputs=output_layer)
 
@@ -137,6 +150,20 @@ class training:
         self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         self.model.summary()
         print(f"\n{Fore.MAGENTA}{Style.BRIGHT}{'Model Compiled Successfully!'}{Style.RESET_ALL}\n")
+        self.model.save('compiled_Model')
+
+    
+    def trainModel(self):
+        """Training the Model"""
+        batch_size = 16
+        epochs = 20
+        self.model.fit(self.x_train, self.y_train, batch_size=batch_size, epochs=epochs, validation_data=(self.x_val, self.y_val))
+        self.model.save('trained_Model')
+        
+        
+    def testModel(self):
+        """Testing the Trained Model"""
+        pass
         
 
 zip_path = "Ready Dataset.zip"
@@ -149,6 +176,7 @@ dataset = training(zip_path, file_format)
 dataset.importData()
 dataset.createModel()
 dataset.compileModel()
+dataset.trainModel()
 
 
 #! Program Run Time

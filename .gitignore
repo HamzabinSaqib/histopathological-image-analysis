@@ -170,3 +170,7 @@ cython_debug/
 
 # Numpy Arrays
 *.npy
+
+# Model Files
+/trained_Model
+/compiled_Model
